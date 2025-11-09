@@ -1,0 +1,129 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <title>Cargar & Analizar Dataset</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="{% static 'uploader/style.css' %}">
+</head>
+<body>
+<div class="container">
+    <h1>📂 Subir y analizar dataset</h1>
+
+    <!-- Upload -->
+    <form method="POST" enctype="multipart/form-data" class="upload-form">
+        {% csrf_token %}
+        <label class="file-label">
+            Selecciona un archivo (CSV, Excel, ARFF)
+            <input type="file" name="dataset" required>
+        </label>
+        <button type="submit" class="btn-upload">Cargar dataset</button>
+    </form>
+
+    <!-- If a dataset has been uploaded, show histogram and split controls -->
+    {% if show_split %}
+    <div class="table-box">
+        <h2>📊 Histograma automático</h2>
+        {% if hist_path %}
+            <img src="{{ hist_path }}" alt="Histograma" style="max-width:100%; border-radius:8px; display:block;"/>
+        {% endif %}
+    </div>
+
+    <form method="POST" action="{% url 'split' %}" class="upload-form" style="margin-top:14px;">
+        {% csrf_token %}
+        <div class="options-row">
+            <div class="option">
+                <label>Formato para guardar:</label>
+                <select name="format">
+                    <option value="csv">CSV</option>
+                    <option value="arff">ARFF</option>
+                </select>
+            </div>
+            <div class="option">
+                <label><input type="checkbox" name="save_splits"> Guardar splits</label>
+            </div>
+        </div>
+
+        <div class="split-row">
+            <label>Train %:
+                <input type="number" name="train_pct" min="1" max="99" value="70"> %
+            </label>
+
+            <label id="val_label" style="display:none;">Val %:
+                <input type="number" name="val_pct" min="0" max="99" value="10"> %
+            </label>
+
+            <label>Test %:
+                <input type="number" name="test_pct" min="1" max="99" value="30"> %
+            </label>
+        </div>
+
+        <label class="checkbox-inline"><input type="checkbox" id="include_val" name="include_val"> Incluir validación (train/val/test)</label>
+
+        <button type="submit" class="btn-upload">Dividir dataset</button>
+    </form>
+    {% endif %}
+
+    <!-- Info text -->
+    {% if info %}
+    <div class="info-box">
+        <h2>ℹ️ Info</h2>
+        <pre>{{ info }}</pre>
+    </div>
+    {% endif %}
+
+    <!-- After split: show summaries, heatmap, previews, and download buttons -->
+    {% if splits_info %}
+    <div class="info-box">
+        <h2>✅ Resultado de la división</h2>
+        <p>Total filas: <strong>{{ splits_info.total_rows }}</strong></p>
+        <p>Train: <strong>{{ splits_info.train_rows }}</strong></p>
+        {% if splits_info.val_rows %}
+        <p>Val: <strong>{{ splits_info.val_rows }}</strong></p>
+        {% endif %}
+        <p>Test: <strong>{{ splits_info.test_rows }}</strong></p>
+        {% if saved_msg %}
+        <p class="saved">{{ saved_msg }}</p>
+        {% endif %}
+    </div>
+
+    <div class="table-box">
+        <h2>🔷 Heatmap (train)</h2>
+        {% if heatmap_path %}
+            <img src="{{ heatmap_path }}" alt="Heatmap" style="max-width:100%; border-radius:8px; display:block;"/>
+        {% endif %}
+    </div>
+
+    <div class="table-box">
+        <h3>Train — primeras filas</h3>
+        {{ train_preview|safe }}
+    </div>
+
+    {% if val_preview %}
+    <div class="table-box">
+        <h3>Validation — primeras filas</h3>
+        {{ val_preview|safe }}
+    </div>
+    {% endif %}
+
+    <div class="table-box">
+        <h3>Test — primeras filas</h3>
+        {{ test_preview|safe }}
+    </div>
+
+    <div style="display:flex; gap:12px; margin-top:12px;">
+        <a href="{% url 'download_pdf' %}" class="btn-upload" style="text-decoration:none; display:inline-block;">Descargar PDF (reporte)</a>
+        <a href="{% url 'download_excel' %}" class="btn-upload" style="text-decoration:none; display:inline-block;">Descargar Excel</a>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+    const includeValChk = document.getElementById('include_val');
+    const valLabel = document.getElementById('val_label');
+    function toggleVal(){ valLabel.style.display = includeValChk.checked ? 'inline-block' : 'none'; }
+    if(includeValChk){ includeValChk.addEventListener('change', toggleVal); toggleVal(); }
+</script>
+</body>
+</html>
